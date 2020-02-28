@@ -20,6 +20,8 @@ public class SimpleLexer {
     private SimpleToken token = null;
     private List<Token> tokens = null;
     private boolean isAlpha(int ch) {return ch >= 'a' && ch <='z' || ch >= 'A' && ch <='Z';}
+    private boolean isDigit(int ch) {return ch >= '0' && ch <= '9';}
+    private boolean isBlank(int ch) {return ch == ' ' || ch == '\t' || ch == '\n';}
     private DfaState initToken(char ch) {
         DfaState newState = DfaState.Initial;
         if (isAlpha(ch)) {
@@ -42,11 +44,33 @@ public class SimpleLexer {
                     case Initial:
                         state = initToken(ch);
                         break;
+                    case Id:
+                        if(isAlpha(ch) || isDigit(ch)) {
+                            tokenText.append(ch);
+                        } else {
+                            state = initToken(ch);
+                        }
+                    case GT:
+                        if (ch == '=') {
+                            token.type = TokenType.GE;
+                            state = DfaState.GE;
+                            tokenText.append(ch);
+                        } else {
+                            state = initToken(ch);
+                        }
+                        break;
+                    case GE:
+                    case Assignment:
+                    case RightParen:
+                        state = initToken(ch);
+                        break;
                 }
             }
         }catch (IOException e) {
             e.printStackTrace();
         }
+        System.out.println(tokens.size());
+
         return new SimpleTokenReader(tokens);
     }
     private class SimpleTokenReader implements TokenReader {
@@ -58,9 +82,7 @@ public class SimpleLexer {
         @Override
         public Token read() {
            if (pos < tokens.size())  {
-               System.out.println(tokens);
                return tokens.get(pos++);
-
            }
             return null;
         }
