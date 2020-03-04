@@ -10,11 +10,30 @@ import java.util.List;
 public class SimpleLexer {
     public static void main(String args[]) {
         SimpleLexer lexer = new SimpleLexer();
-       var tokens = new ArrayList<Token>();
-        System.out.println(tokens);
         String script = "int age = 26;";
         System.out.println("parse :" + script);
         SimpleTokenReader tokenReader = lexer.tokenize(script);
+        dump(tokenReader);
+
+        script = "inta age = 26;";
+        System.out.println("\nparse :" + script);
+        tokenReader = lexer.tokenize(script);
+        dump(tokenReader);
+
+        script = "in age = 26;";
+        System.out.println("\nparse :" + script);
+        tokenReader = lexer.tokenize(script);
+        dump(tokenReader);
+
+        script = "age >= 26;";
+        System.out.println("\nparse :" + script);
+        tokenReader = lexer.tokenize(script);
+        dump(tokenReader);
+
+        script = "age > 26;";
+        System.out.println("\nparse :" + script);
+        tokenReader = lexer.tokenize(script);
+        dump(tokenReader);
     }
     private StringBuffer tokenText = null;
     private SimpleToken token = null;
@@ -23,9 +42,43 @@ public class SimpleLexer {
     private boolean isDigit(int ch) {return ch >= '0' && ch <= '9';}
     private boolean isBlank(int ch) {return ch == ' ' || ch == '\t' || ch == '\n';}
     private DfaState initToken(char ch) {
+        if (tokenText.length() > 0) {
+            token.text = tokenText.toString();
+            tokens.add(token);
+            tokenText = new StringBuffer();
+            token = new SimpleToken();
+        }
         DfaState newState = DfaState.Initial;
         if (isAlpha(ch)) {
-//            token.type
+            if (ch == 'i') {
+                newState = DfaState.Id_int1;
+            } else {
+                newState = DfaState.Id;
+            }
+            token.type = TokenType.Identifier;
+            tokenText.append(ch);
+        }else if (isDigit(ch)) {
+            newState = DfaState.IntLiteral;
+            token.type = TokenType.IntLiteral;
+            tokenText.append(ch);
+        }
+        else if (ch == '=') {
+            newState = DfaState.Assignment;
+            token.type = TokenType.Assignment;
+            tokenText.append(ch);
+        }
+        else if (ch == '>') {
+            newState = DfaState.GT;
+            token.type = TokenType.GT;
+            tokenText.append(ch);
+        }
+        else if (ch == ';') {
+            newState = DfaState.SemiColon;
+            token.type = TokenType.SemiColon;
+            tokenText.append(ch);
+        }
+        else {
+            newState = DfaState.Initial;
         }
         return newState;
     }
@@ -50,6 +103,7 @@ public class SimpleLexer {
                         } else {
                             state = initToken(ch);
                         }
+                        break;
                     case GT:
                         if (ch == '=') {
                             token.type = TokenType.GE;
@@ -61,15 +115,59 @@ public class SimpleLexer {
                         break;
                     case GE:
                     case Assignment:
+                    case SemiColon:
                     case RightParen:
                         state = initToken(ch);
                         break;
+                    case IntLiteral:
+                        if (isDigit(ch)){
+                            tokenText.append(ch);
+                        }else {
+                            state = initToken(ch);
+                        }
+                        break;
+                    case Id_int1:
+                        if (ch == 'n') {
+                            state = DfaState.Id_int2;
+                            tokenText.append(ch);
+                        }else if (isDigit(ch) || isAlpha(ch)) {
+                            state = DfaState.Id;
+                            tokenText.append(ch);
+                        }else {
+                            state = initToken(ch);
+                        }
+                        break;
+                    case Id_int2:
+                        if (ch == 't') {
+                            state = DfaState.Id_int3;
+                            tokenText.append(ch);
+                        }else if (isDigit(ch) || isAlpha(ch)) {
+                            state = DfaState.Id;
+                            tokenText.append(ch);
+                        }else {
+                            state = initToken(ch);
+                        }
+                        break;
+                    case Id_int3:
+                        if (isBlank(ch)){
+                            token.type = TokenType.Int;
+                            state = initToken(ch);
+                        }
+                        else {
+                            state = DfaState.Id;
+                            tokenText.append(ch);
+                        }
+                        break;
+                    default:
+
                 }
+            }
+            if (tokenText.length() > 0) {
+                initToken(ch);
             }
         }catch (IOException e) {
             e.printStackTrace();
         }
-        System.out.println(tokens.size());
 
         return new SimpleTokenReader(tokens);
     }
@@ -125,6 +223,13 @@ public class SimpleLexer {
 
         @Override
         public String getText() { return text; }
+    }
+    public static void dump(SimpleTokenReader tokenReader) {
+        System.out.println("text\ttype");
+        Token token = null;
+        while ((token = tokenReader.read()) != null) {
+            System.out.println(token.getText()+"\t\t"+token.getType());
+        }
     }
     private enum DfaState {
         Initial,
