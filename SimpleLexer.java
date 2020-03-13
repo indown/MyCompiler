@@ -72,6 +72,16 @@ public class SimpleLexer {
             token.type = TokenType.GT;
             tokenText.append(ch);
         }
+        else if (ch == '+') {
+            newState = DfaState.Plus;
+            token.type = TokenType.Plus;
+            tokenText.append(ch);
+        }
+        else if (ch == '*') {
+            newState = DfaState.Star;
+            token.type = TokenType.Star;
+            tokenText.append(ch);
+        }
         else if (ch == ';') {
             newState = DfaState.SemiColon;
             token.type = TokenType.SemiColon;
@@ -115,6 +125,8 @@ public class SimpleLexer {
                         break;
                     case GE:
                     case Assignment:
+                    case Plus:
+                    case Star:
                     case SemiColon:
                     case RightParen:
                         state = initToken(ch);
